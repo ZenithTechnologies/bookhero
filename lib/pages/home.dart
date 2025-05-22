@@ -1,7 +1,10 @@
+import 'package:bookhero/config/comic_data.dart';
 import 'package:bookhero/pages/eras.dart';
 import 'package:bookhero/pages/events.dart';
-import 'package:bookhero/pages/needs.dart';
+import 'package:bookhero/pages/needs/needs.dart';
+import 'package:bookhero/pages/obtained/obtained.dart';
 import 'package:flutter/material.dart';
+import 'package:bookhero/controllers/comic_collection_controller.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -12,94 +15,15 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> with TickerProviderStateMixin {
   late TabController _tabController;
+  late final ComicCollectionController controller;
 
-  final Map<String, List<Map<String, dynamic>>> needsData = {
-    'Superman New 52 (2012–2015)': [
-      {
-        'issue': '1',
-        'tags': ['Trinity War'],
-        'obtained': false,
-      },
-      {'issue': '4', 'tags': [], 'obtained': false},
-      {
-        'issue': '7',
-        'tags': ['Doomed'],
-        'obtained': false,
-      },
-      {'issue': '8', 'tags': [], 'obtained': false},
-      {
-        'issue': '9',
-        'tags': ['Forever Evil'],
-        'obtained': false,
-      },
-    ],
-  };
-
-  final Map<String, List<Map<String, dynamic>>> obtainedData = {};
   final Set<String> expandedHeaders = {};
-
-  void _toggleObtained(String header, int index) {
-    setState(() {
-      needsData[header]![index]['obtained'] =
-          !(needsData[header]![index]['obtained'] as bool);
-    });
-  }
-
-  void _syncObtained() {
-    setState(() {
-      needsData.forEach((header, issues) {
-        final obtained =
-            issues.where((issue) => issue['obtained'] == true).toList();
-        needsData[header]!.removeWhere((issue) => issue['obtained'] == true);
-        if (obtained.isNotEmpty) {
-          obtainedData
-              .putIfAbsent(header, () => [])
-              .addAll(obtained.map((e) => {...e, 'obtained': true}));
-        }
-      });
-    });
-  }
 
   @override
   void initState() {
+    controller = ComicCollectionController();
     _tabController = TabController(length: 2, vsync: this);
     super.initState();
-  }
-
-  Widget _buildObtainedTab() {
-    return ListView(
-      children:
-          obtainedData.entries.map((entry) {
-            final header = entry.key;
-            final issues = entry.value;
-
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ListTile(
-                  title: Text(
-                    header,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-                ...issues.map(
-                  (issue) => ListTile(
-                    title: Text('Issue #${issue['issue']}'),
-                    subtitle:
-                        issue['tags'].isNotEmpty
-                            ? Text('Tags: ${issue['tags'].join(', ')}')
-                            : null,
-                    trailing: const Icon(
-                      Icons.check_circle,
-                      color: Colors.green,
-                    ),
-                  ),
-                ),
-                const Divider(),
-              ],
-            );
-          }).toList(),
-    );
   }
 
   @override
@@ -153,7 +77,7 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
             IconButton(
               icon: const Icon(Icons.sync),
               tooltip: "Sync obtained",
-              onPressed: _syncObtained,
+              onPressed: () {},
             ),
         ],
       ),
@@ -161,11 +85,15 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
         controller: _tabController,
         children: [
           NeedsPage(
-            needsData: needsData,
-            expandedHeaders: expandedHeaders,
-            toggleObtained: _toggleObtained,
+            needsData: controller.needsList,
+            expandedHeaders: controller.needsHeaders,
+            toggleObtained: controller.toggleObtained,
           ),
-          _buildObtainedTab(),
+          Obtained(
+            // obtainedData: controller.obtainedList,
+            // expandedHeaders: controller.obtainedHeaders,
+            // syncToCloud: controller.syncObtained,
+          ),
         ],
       ),
     );
