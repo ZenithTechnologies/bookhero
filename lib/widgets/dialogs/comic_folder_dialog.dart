@@ -46,9 +46,12 @@ Future<Comic?> showAddFolderDialog(BuildContext context) async {
                 DropdownButtonFormField<String>(
                   value: selectedEra,
                   items:
-                      dcEras.map((era) {
-                        return DropdownMenuItem(value: era, child: Text(era));
-                      }).toList(),
+                      dcEras
+                          .map(
+                            (era) =>
+                                DropdownMenuItem(value: era, child: Text(era)),
+                          )
+                          .toList(),
                   onChanged: (value) {
                     if (value != null) {
                       setDialogState(() => selectedEra = value);
@@ -113,6 +116,7 @@ Future<Comic?> showAddFolderDialog(BuildContext context) async {
                         }
 
                         final comic = Comic(
+                          id: null,
                           title: name,
                           era: selectedEra,
                           yearRange: year,
@@ -181,12 +185,9 @@ Future<void> showEditFolderDialog({
                 DropdownButtonFormField<String>(
                   value: selectedEra,
                   items:
-                      dcEras
-                          .map(
-                            (era) =>
-                                DropdownMenuItem(value: era, child: Text(era)),
-                          )
-                          .toList(),
+                      dcEras.map((era) {
+                        return DropdownMenuItem(value: era, child: Text(era));
+                      }).toList(),
                   onChanged: (value) {
                     if (value != null) {
                       setDialogState(() => selectedEra = value);
@@ -205,18 +206,16 @@ Future<void> showEditFolderDialog({
                   child: Wrap(
                     spacing: 10,
                     children:
-                        ['Singles', 'Mini-Series', 'Trade']
-                            .map(
-                              (type) => ChoiceChip(
-                                label: Text(type),
-                                selected: selectedType == type,
-                                onSelected:
-                                    (_) => setDialogState(
-                                      () => selectedType = type,
-                                    ),
-                              ),
-                            )
-                            .toList(),
+                        ['Singles', 'Mini-Series', 'Trade'].map((type) {
+                          final isSelected = selectedType == type;
+                          return ChoiceChip(
+                            label: Text(type),
+                            selected: isSelected,
+                            onSelected:
+                                (_) =>
+                                    setDialogState(() => selectedType = type),
+                          );
+                        }).toList(),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -231,7 +230,7 @@ Future<void> showEditFolderDialog({
                               (context) => AlertDialog(
                                 title: const Text('Confirm Deletion'),
                                 content: Text(
-                                  'Are you sure that you want to delete: ${comic.title}',
+                                  'Are you sure you want to delete: ${comic.title}?',
                                 ),
                                 actions: [
                                   TextButton(
@@ -270,17 +269,33 @@ Future<void> showEditFolderDialog({
                           onPressed: () {
                             final name = nameController.text.trim();
                             final year = yearController.text.trim();
-                            if (name.isNotEmpty && year.isNotEmpty) {
-                              final updatedComic = Comic(
-                                title: name,
-                                era: selectedEra,
-                                yearRange: year,
-                                comicType: selectedType,
-                                issues: comic.issues,
+
+                            if (name.isEmpty ||
+                                year.isEmpty ||
+                                selectedEra.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Please fill out all fields.'),
+                                  behavior: SnackBarBehavior.floating,
+                                ),
                               );
-                              onSave(updatedComic, comic.title);
-                              Navigator.of(context).pop();
+                              return;
                             }
+
+                            final updatedComic = Comic(
+                              id: comic.id, // preserve original ID
+                              title: name,
+                              era: selectedEra,
+                              yearRange: year,
+                              comicType: selectedType,
+                              issues: comic.issues, // preserve issue list
+                            );
+
+                            onSave(
+                              updatedComic,
+                              comic.toString(),
+                            ); // use old header
+                            Navigator.of(context).pop();
                           },
                           child: const Text('Save Changes'),
                         ),
@@ -297,28 +312,35 @@ Future<void> showEditFolderDialog({
   );
 }
 
-Future<void> showConfirmDeleteDialog(
-  BuildContext context,
-  String folderName,
-  VoidCallback onConfirm,
-) async {
+Future<void> showConfirmDeleteDialog({
+  required BuildContext context,
+  required String folderName,
+  required VoidCallback onConfirm,
+}) async {
   final confirmed = await showDialog<bool>(
     context: context,
     builder:
         (context) => AlertDialog(
-          title: const Text('Confirm Deletion'),
+          title: const Text(
+            'Confirm Deletion',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
           content: Text(
-            'Are you sure you want to delete "$folderName"? This action cannot be undone.',
+            'Are you sure you want to permanently delete the folder:\n\n"$folderName"\n\nThis action cannot be undone.',
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
               child: const Text('Cancel'),
             ),
-            ElevatedButton(
+            ElevatedButton.icon(
+              icon: const Icon(Icons.delete_forever),
+              label: const Text('Delete'),
               onPressed: () => Navigator.of(context).pop(true),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              child: const Text('Delete'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
             ),
           ],
         ),

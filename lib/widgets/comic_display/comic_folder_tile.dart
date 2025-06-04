@@ -28,7 +28,8 @@ class ComicFolderTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final header = section.header;
+    final header = section.displayLabel;
+
     final isEvent = section.isEventMode;
 
     return Column(

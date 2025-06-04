@@ -24,42 +24,45 @@ class DatabaseHelper {
 
   Future<void> _onCreate(Database db, int version) async {
     await db.execute('''
-      CREATE TABLE series (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT NOT NULL,
-        era TEXT NOT NULL,
-        year_range TEXT NOT NULL,
-        comic_type TEXT NOT NULL
-      )
-    ''');
+    CREATE TABLE eras (
+      id INTEGER PRIMARY KEY,
+      name TEXT NOT NULL
+    )
+  ''');
 
     await db.execute('''
-      CREATE TABLE issues (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        series_id INTEGER,
-        issue_number INTEGER,
-        obtained INTEGER,
-        event TEXT,
-        cover_type TEXT,
-        variant TEXT,
-        special_edition TEXT,
-        FOREIGN KEY(series_id) REFERENCES series(id)
-      )
-    ''');
+    CREATE TABLE events (
+      id INTEGER PRIMARY KEY,
+      name TEXT NOT NULL
+    )
+  ''');
 
     await db.execute('''
-      CREATE TABLE events (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL
-      )
-    ''');
+    CREATE TABLE series (
+      id INTEGER PRIMARY KEY,
+      title TEXT NOT NULL,
+      description TEXT,
+      year_range TEXT,
+      comic_type TEXT
+    )
+  ''');
 
     await db.execute('''
-      CREATE TABLE eras (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL
-      )
-    ''');
+    CREATE TABLE issues (
+      id INTEGER PRIMARY KEY,
+      series_id INTEGER NOT NULL,
+      issue_number INTEGER NOT NULL,
+      obtained INTEGER DEFAULT 0,
+      tags TEXT, -- stored as a JSON string
+      cover_type TEXT,
+      variant TEXT,
+      special_edition TEXT,
+      description TEXT,
+      event_id INTEGER,
+      FOREIGN KEY(series_id) REFERENCES series(id),
+      FOREIGN KEY(event_id) REFERENCES events(id)
+    )
+  ''');
   }
 
   // SERIES CRUD

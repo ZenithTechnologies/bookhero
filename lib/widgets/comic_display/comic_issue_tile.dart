@@ -1,5 +1,3 @@
-// lib/widgets/comic_display/comic_issue_tile.dart
-
 import 'package:bookhero/model/comic_model.dart';
 import 'package:flutter/material.dart';
 import 'package:bookhero/config/events_data.dart';
@@ -8,16 +6,20 @@ class ComicIssueTile extends StatelessWidget {
   final String header;
   final Issue issue;
   final int index;
-  final void Function(String, int) onTap;
+  final void Function(int) markPendingToggle;
   final String? overrideSeries;
+  final bool isPending;
+  final bool currentObtained;
 
   const ComicIssueTile({
     super.key,
     required this.header,
     required this.issue,
     required this.index,
-    required this.onTap,
+    required this.markPendingToggle,
     this.overrideSeries,
+    required this.isPending,
+    required this.currentObtained,
   });
 
   @override
@@ -29,24 +31,42 @@ class ComicIssueTile extends StatelessWidget {
 
     final Widget subtitle =
         overrideSeries != null
-            ? _buildEventModeSubtitle(context, overrideSeries!)
+            ? Text(overrideSeries!)
             : _buildIssueSubtext(issue.tags) ?? const SizedBox.shrink();
+
+    IconData trailingIcon;
+    Color? trailingColor;
+
+    if (isPending) {
+      trailingIcon = Icons.pending;
+      trailingColor = Colors.orange;
+    } else if (currentObtained) {
+      trailingIcon = Icons.check_circle;
+      trailingColor = Colors.green;
+    } else {
+      trailingIcon = Icons.radio_button_unchecked;
+      trailingColor = null;
+    }
 
     return ListTile(
       leading: const Icon(Icons.book_rounded),
       title: Text(titleText),
       subtitle: subtitle,
       trailing: Icon(
-        issue.obtained ? Icons.check_circle : Icons.radio_button_unchecked,
-        color: issue.obtained ? Colors.green : null,
+        isPending
+            ? Icons.pending
+            : currentObtained
+            ? Icons.check_circle
+            : Icons.radio_button_unchecked,
+        color:
+            isPending
+                ? Colors.orange
+                : currentObtained
+                ? Colors.green
+                : null,
       ),
-      onTap: () => onTap(header, index),
+      onTap: () => markPendingToggle(issue.id!),
     );
-  }
-
-  Widget _buildEventModeSubtitle(BuildContext context, String seriesTitle) {
-    // Only showing the series title (you can adjust this as needed)
-    return Text(seriesTitle);
   }
 
   Widget? _buildIssueSubtext(List<String> tags) {

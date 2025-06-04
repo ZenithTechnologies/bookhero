@@ -1,3 +1,4 @@
+import 'package:bookhero/database/database_helper.dart';
 import 'package:bookhero/model/comic_model.dart';
 import 'package:bookhero/config/comic_data.dart'; // where mockComics is defined
 
@@ -15,10 +16,22 @@ class ComicCollectionController {
   final Set<String> needsHeaders = {};
   final Set<String> obtainedHeaders = {};
 
-  void toggleObtained(String header, int index) {
-    final comic = mockComics.firstWhere((comic) => comic.toString() == header);
-    final issue = comic.issues[index];
+  void toggleObtainedByIssueId(int issueId) async {
+    final db = DatabaseHelper();
+
+    // Fetch the issue from the database
+    final issueRows = await db.db.then(
+      (db) => db.query('issues', where: 'id = ?', whereArgs: [issueId]),
+    );
+
+    if (issueRows.isEmpty) return;
+
+    final issue = Issue.fromMap(issueRows.first);
     issue.obtained = !issue.obtained;
+
+    await db.updateIssue(issueId, issue.toMap());
+
+    // Optionally: refresh needsList and obtainedList here if you're displaying from controller
   }
 
   void syncObtained() {

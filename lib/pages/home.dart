@@ -1,8 +1,10 @@
 import 'package:bookhero/config/comic_data.dart';
+import 'package:bookhero/database/sync.dart';
 import 'package:bookhero/pages/eras.dart';
 import 'package:bookhero/pages/events.dart';
 import 'package:bookhero/pages/needs/needs.dart';
 import 'package:bookhero/pages/obtained/obtained.dart';
+import 'package:bookhero/widgets/sync/sync_popup.dart';
 import 'package:flutter/material.dart';
 import 'package:bookhero/controllers/comic_collection_controller.dart';
 
@@ -18,12 +20,24 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
   late final ComicCollectionController controller;
 
   final Set<String> expandedHeaders = {};
+  final GlobalKey<NeedsPageState> _needsPageKey = GlobalKey<NeedsPageState>();
+  bool _needsSync = false;
 
   @override
   void initState() {
     controller = ComicCollectionController();
     _tabController = TabController(length: 2, vsync: this);
     super.initState();
+    _checkSyncStatus(); // 👈 Add this
+  }
+
+  Future<void> _checkSyncStatus() async {
+    final needsSync = await SyncStatusService().isSyncRequired();
+    if (mounted) {
+      setState(() {
+        _needsSync = needsSync;
+      });
+    }
   }
 
   @override
@@ -73,22 +87,43 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
           tabs: [Tab(text: "Needs"), Tab(text: "Obtained")],
         ),
         actions: [
-          if (_tabController.index == 0)
-            IconButton(
-              icon: const Icon(Icons.sync),
-              tooltip: "Sync obtained",
-              onPressed: () {},
-            ),
+          Stack(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.cloud_sync),
+                tooltip: 'Sync with Server',
+                onPressed: () async {
+                  final itemsToSync = await getUnsyncedIssues();
+                  if (context.mounted) {
+                    showSyncDialog(context, itemsToSync, () {
+                      _needsPageKey.currentState
+                          ?.reloadData(); // ✅ Refresh list
+                      setState(() => _needsSync = false); // ✅ Hide red dot
+                    });
+                  }
+                },
+              ),
+              if (_needsSync)
+                const Positioned(
+                  right: 6,
+                  top: 6,
+                  child: CircleAvatar(radius: 5, backgroundColor: Colors.red),
+                ),
+            ],
+          ),
         ],
       ),
       body: TabBarView(
         controller: _tabController,
         children: [
           NeedsPage(
-            needsData: controller.needsList,
+            key: _needsPageKey,
             expandedHeaders: controller.needsHeaders,
-            toggleObtained: controller.toggleObtained,
+            toggleObtained:
+                controller.toggleObtainedByIssueId, // <-- this now matches
+            onLocalChange: () => setState(() => _needsSync = true),
           ),
+
           Obtained(
             // obtainedData: controller.obtainedList,
             // expandedHeaders: controller.obtainedHeaders,

@@ -3,11 +3,12 @@ class Issue {
   int seriesId;
   int issueNumber;
   bool obtained;
-  List<String> tags;
-  String? event;
+  List<String> tags; // derived from below fields
+  int? eventId;
   String? coverType;
   String? variant;
   String? specialEdition;
+  String? description;
 
   Issue({
     this.id,
@@ -15,11 +16,35 @@ class Issue {
     required this.issueNumber,
     this.obtained = false,
     this.tags = const [],
-    this.event,
+    this.eventId,
     this.coverType,
     this.variant,
     this.specialEdition,
+    this.description,
   });
+
+  factory Issue.fromMap(Map<String, dynamic> map) {
+    final rawTags =
+        map['tags']
+            ?.toString()
+            .split(',')
+            .where((t) => t.isNotEmpty)
+            .toList() ??
+        [];
+
+    return Issue(
+      id: map['id'],
+      seriesId: map['series_id'],
+      issueNumber: map['issue_number'],
+      obtained: map['obtained'] == 1,
+      eventId: map['event_id'],
+      coverType: map['cover_type'],
+      variant: map['variant'],
+      specialEdition: map['special_edition'],
+      description: map['description'],
+      tags: rawTags,
+    );
+  }
 
   Map<String, dynamic> toMap() {
     return {
@@ -27,33 +52,13 @@ class Issue {
       'series_id': seriesId,
       'issue_number': issueNumber,
       'obtained': obtained ? 1 : 0,
-      'event': event,
+      'tags': tags.join(','),
+      'event_id': eventId,
       'cover_type': coverType,
       'variant': variant,
       'special_edition': specialEdition,
-      // We don’t store tags directly in DB — reconstruct from event + chip fields
+      'description': description,
     };
-  }
-
-  factory Issue.fromMap(Map<String, dynamic> map) {
-    final tags = <String>[
-      if (map['event'] != null) map['event'],
-      if (map['cover_type'] != null) map['cover_type'],
-      if (map['variant'] != null) map['variant'],
-      if (map['special_edition'] != null) map['special_edition'],
-    ];
-
-    return Issue(
-      id: map['id'],
-      seriesId: map['series_id'],
-      issueNumber: map['issue_number'],
-      obtained: map['obtained'] == 1,
-      event: map['event'],
-      coverType: map['cover_type'],
-      variant: map['variant'],
-      specialEdition: map['special_edition'],
-      tags: tags,
-    );
   }
 }
 
@@ -91,12 +96,12 @@ class Comic {
       era: map['era'],
       yearRange: map['year_range'],
       comicType: map['comic_type'],
-      issues: [], // Load separately
+      issues: [], // Loaded separately
     );
   }
 
   @override
   String toString() {
-    return '$title ($yearRange) : $era - $comicType';
+    return '$title ($yearRange): $era - $comicType';
   }
 }

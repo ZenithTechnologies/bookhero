@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 Future<void> showAdvancedMultiAddDialog({
   required BuildContext context,
+  required int comicId,
   required String header,
   required List<Comic> comicList,
   required VoidCallback onIssuesAdded,
@@ -28,172 +29,167 @@ Future<void> showAdvancedMultiAddDialog({
 
   await showDialog(
     context: context,
-    builder: (context) {
-      return StatefulBuilder(
-        builder: (context, setDialogState) {
-          return AlertDialog(
-            title: const Text('Add Multiple Issues (Advanced)'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ...issues.asMap().entries.map((entry) {
-                    final index = entry.key;
-                    final issueData = entry.value;
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: DropdownButtonFormField<String>(
-                                value: issueData['issue'],
-                                decoration: const InputDecoration(
-                                  labelText: 'Issue #',
+    builder:
+        (context) => StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Add Multiple Issues (Advanced)'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ...issues.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final issueData = entry.value;
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: DropdownButtonFormField<String>(
+                                  value: issueData['issue'],
+                                  decoration: const InputDecoration(
+                                    labelText: 'Issue #',
+                                  ),
+                                  items:
+                                      issueNumbers
+                                          .map(
+                                            (num) => DropdownMenuItem(
+                                              value: num,
+                                              child: Text(num),
+                                            ),
+                                          )
+                                          .toList(),
+                                  onChanged:
+                                      (val) => setDialogState(
+                                        () => issueData['issue'] = val,
+                                      ),
                                 ),
-                                items:
-                                    issueNumbers
-                                        .map(
-                                          (num) => DropdownMenuItem(
-                                            value: num,
-                                            child: Text(num),
-                                          ),
-                                        )
-                                        .toList(),
-                                onChanged:
-                                    (val) => setDialogState(
-                                      () => issueData['issue'] = val,
+                              ),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.remove_circle,
+                                  color: Colors.red,
+                                ),
+                                onPressed:
+                                    () => setDialogState(
+                                      () => issues.removeAt(index),
                                     ),
                               ),
-                            ),
-                            IconButton(
-                              icon: const Icon(
-                                Icons.remove_circle,
-                                color: Colors.red,
-                              ),
-                              onPressed: () {
-                                setDialogState(() => issues.removeAt(index));
-                              },
-                            ),
-                          ],
-                        ),
-                        DropdownButtonFormField<String>(
-                          value: issueData['event'],
-                          decoration: const InputDecoration(
-                            labelText: 'Event Tag',
+                            ],
                           ),
-                          items:
-                              eventTags
-                                  .map(
-                                    (tag) => DropdownMenuItem(
-                                      value: tag,
-                                      child: Text(tag),
-                                    ),
-                                  )
-                                  .toList(),
-                          onChanged:
-                              (val) => setDialogState(
-                                () => issueData['event'] = val,
-                              ),
-                        ),
-                        Wrap(
-                          spacing: 6,
-                          children:
-                              chips.map((chip) {
-                                final isSelected = issueData['tags'].contains(
-                                  chip,
-                                );
-                                return FilterChip(
-                                  label: Text(chip),
-                                  selected: isSelected,
-                                  onSelected: (value) {
-                                    setDialogState(() {
-                                      value
-                                          ? issueData['tags'].add(chip)
-                                          : issueData['tags'].remove(chip);
-                                    });
-                                  },
-                                );
-                              }).toList(),
-                        ),
-                        const Divider(),
-                      ],
-                    );
-                  }),
-                  TextButton.icon(
-                    onPressed: () {
-                      setDialogState(() {
-                        issues.add({
-                          'issue': null,
-                          'event': null,
-                          'tags': <String>{},
-                        });
-                      });
-                    },
-                    icon: const Icon(Icons.add),
-                    label: const Text("Add Another Issue"),
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  final matchedComicList =
-                      comicList
-                          .where((comic) => comic.toString() == header)
-                          .toList();
-
-                  if (matchedComicList.isEmpty) {
-                    Navigator.of(context).pop();
-                    return;
-                  }
-
-                  final comic = matchedComicList.first;
-
-                  for (var item in issues) {
-                    if (item['issue'] != null) {
-                      final newIssue = Issue(
-                        id: null, // will be set by DB
-                        seriesId: comic.id!, // now safe to access
-                        issueNumber: int.parse(item['issue']),
-                        obtained: false,
-                        tags: [
-                          if (item['event'] != null) item['event'],
-                          ...item['tags'],
+                          DropdownButtonFormField<String>(
+                            value: issueData['event'],
+                            decoration: const InputDecoration(
+                              labelText: 'Event Tag',
+                            ),
+                            items:
+                                eventTags
+                                    .map(
+                                      (tag) => DropdownMenuItem(
+                                        value: tag,
+                                        child: Text(tag),
+                                      ),
+                                    )
+                                    .toList(),
+                            onChanged:
+                                (val) => setDialogState(
+                                  () => issueData['event'] = val,
+                                ),
+                          ),
+                          Wrap(
+                            spacing: 6,
+                            children:
+                                chips.map((chip) {
+                                  final isSelected = issueData['tags'].contains(
+                                    chip,
+                                  );
+                                  return FilterChip(
+                                    label: Text(chip),
+                                    selected: isSelected,
+                                    onSelected: (value) {
+                                      setDialogState(() {
+                                        value
+                                            ? issueData['tags'].add(chip)
+                                            : issueData['tags'].remove(chip);
+                                      });
+                                    },
+                                  );
+                                }).toList(),
+                          ),
+                          const Divider(),
                         ],
-                        event: item['event'],
-                        coverType:
-                            item['tags'].contains('Foil Cover')
-                                ? 'Foil Cover'
-                                : null,
-                        variant:
-                            item['tags'].contains('Variant Cover')
-                                ? 'Variant Cover'
-                                : null,
-                        specialEdition:
-                            item['tags'].contains('Annual') ? 'Annual' : null,
                       );
-
-                      comic.issues.add(newIssue);
-                    }
-                  }
-
-                  onIssuesAdded();
-                  Navigator.of(context).pop();
-                },
-
-                child: const Text('Add All'),
+                    }),
+                    TextButton.icon(
+                      icon: const Icon(Icons.add),
+                      label: const Text("Add Another Issue"),
+                      onPressed: () {
+                        setDialogState(() {
+                          issues.add({
+                            'issue': null,
+                            'event': null,
+                            'tags': <String>{},
+                          });
+                        });
+                      },
+                    ),
+                  ],
+                ),
               ),
-            ],
-          );
-        },
-      );
-    },
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    final matchedComic = comicList.firstWhere(
+                      (c) => c.id == comicId,
+                    );
+
+                    for (var item in issues) {
+                      if (item['issue'] != null) {
+                        final eventTag = item['event'] as String?;
+                        final tagList = (item['tags'] as Set<String>).toList();
+
+                        final newIssue = Issue(
+                          id: null,
+                          seriesId: matchedComic.id!,
+                          issueNumber: int.parse(item['issue']),
+                          obtained: false,
+                          eventId:
+                              eventTag != null
+                                  ? knownEvents.indexOf(eventTag) + 1
+                                  : null,
+                          tags: [if (eventTag != null) eventTag, ...tagList],
+                          coverType:
+                              tagList.contains('Foil Cover')
+                                  ? 'Foil Cover'
+                                  : null,
+                          variant:
+                              tagList.contains('Variant Cover')
+                                  ? 'Variant Cover'
+                                  : null,
+                          specialEdition:
+                              tagList.contains('Annual') ? 'Annual' : null,
+                        );
+
+                        matchedComic.issues.add(newIssue);
+                      }
+                    }
+
+                    onIssuesAdded();
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('Add All'),
+                ),
+              ],
+            );
+          },
+        ),
   );
 }
 
@@ -209,94 +205,113 @@ Future<void> showEditIssueDialog({
     'Reprint',
     'One-Shot',
   ];
-
   final TextEditingController issueNumberController = TextEditingController(
     text: issue.issueNumber.toString(),
   );
+  String? selectedEvent =
+      issue.tags.where((tag) => knownEvents.contains(tag)).isNotEmpty
+          ? issue.tags.firstWhere((tag) => knownEvents.contains(tag))
+          : null;
 
-  String? selectedEvent = issue.event;
   Set<String> selectedTags = {...issue.tags};
 
   await showDialog(
     context: context,
-    builder: (context) {
-      return StatefulBuilder(
-        builder: (context, setState) {
-          return AlertDialog(
-            title: const Text('Edit Issue'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: issueNumberController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'Issue Number',
+    builder:
+        (context) => StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Edit Issue'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: issueNumberController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Issue Number',
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    value: selectedEvent,
-                    decoration: const InputDecoration(labelText: 'Event Tag'),
-                    items:
-                        knownEvents
-                            .map(
-                              (tag) => DropdownMenuItem(
-                                value: tag,
-                                child: Text(tag),
-                              ),
-                            )
-                            .toList(),
-                    onChanged: (value) => setState(() => selectedEvent = value),
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    children:
-                        chips.map((chip) {
-                          final isSelected = selectedTags.contains(chip);
-                          return FilterChip(
-                            label: Text(chip),
-                            selected: isSelected,
-                            onSelected: (value) {
-                              setState(() {
-                                value
-                                    ? selectedTags.add(chip)
-                                    : selectedTags.remove(chip);
-                              });
-                            },
-                          );
-                        }).toList(),
-                  ),
-                ],
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      value: selectedEvent,
+                      decoration: const InputDecoration(labelText: 'Event Tag'),
+                      items:
+                          knownEvents
+                              .map(
+                                (tag) => DropdownMenuItem(
+                                  value: tag,
+                                  child: Text(tag),
+                                ),
+                              )
+                              .toList(),
+                      onChanged: (val) => setState(() => selectedEvent = val),
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      children:
+                          chips.map((chip) {
+                            final isSelected = selectedTags.contains(chip);
+                            return FilterChip(
+                              label: Text(chip),
+                              selected: isSelected,
+                              onSelected: (value) {
+                                setState(() {
+                                  value
+                                      ? selectedTags.add(chip)
+                                      : selectedTags.remove(chip);
+                                });
+                              },
+                            );
+                          }).toList(),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  final updatedNumber = int.tryParse(
-                    issueNumberController.text,
-                  );
-                  if (updatedNumber != null) {
-                    issue.issueNumber = updatedNumber;
-                    issue.event = selectedEvent;
-                    issue.tags = selectedTags.toList();
-                    onSave();
-                    Navigator.of(context).pop();
-                  }
-                },
-                child: const Text('Save'),
-              ),
-            ],
-          );
-        },
-      );
-    },
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    final updatedNumber = int.tryParse(
+                      issueNumberController.text,
+                    );
+                    if (updatedNumber != null) {
+                      issue.issueNumber = updatedNumber;
+                      issue.eventId =
+                          selectedEvent != null
+                              ? knownEvents.indexOf(selectedEvent!) + 1
+                              : null;
+                      issue.tags = [
+                        if (selectedEvent != null) selectedEvent!,
+                        ...selectedTags,
+                      ];
+                      issue.coverType =
+                          selectedTags.contains('Foil Cover')
+                              ? 'Foil Cover'
+                              : null;
+                      issue.variant =
+                          selectedTags.contains('Variant Cover')
+                              ? 'Variant Cover'
+                              : null;
+                      issue.specialEdition =
+                          selectedTags.contains('Annual') ? 'Annual' : null;
+
+                      onSave();
+                      Navigator.of(context).pop();
+                    }
+                  },
+
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          },
+        ),
   );
 }
 
